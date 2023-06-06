@@ -3,11 +3,21 @@
 namespace Dcblogdev\MsGraph\Resources;
 
 use Dcblogdev\MsGraph\Facades\MsGraph;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 class Contacts extends MsGraph
 {
+    private $total;
     private $top;
     private $skip;
+
+    public function total($total)
+    {
+        $this->total = $total;
+
+        return $this;
+    }
 
     public function top($top)
     {
@@ -25,8 +35,13 @@ class Contacts extends MsGraph
 
     public function get($params = [])
     {
-        $top  = request('top', $this->top);
-        $skip = request('skip', $this->skip);
+        $total  = request('total', $this->total ?? 0);
+        $top  = request('top', $this->top ?? 0);
+        $skip = request('skip', $this->skip ?? 0);
+
+        $page = $params['page'];
+        $perPage = $params['top'];
+        $_skip = $params['skip'];
 
         if ($params == []) {
             $params = http_build_query([
@@ -41,13 +56,26 @@ class Contacts extends MsGraph
 
         $contacts = MsGraph::get('me/contacts?'.$params);
 
-        $data = MsGraph::getPagination($contacts, $top, $skip);
+        $data = MsGraph::getPagination($contacts, $total, $perPage, $_skip);
+
+        $data = $contacts['value'];
+        $totalCount = $contacts['@odata.count'];
+        $collection = new Collection($data);
+
+        $paginator = new LengthAwarePaginator(
+            $collection->forPage(1, $perPage),
+            $totalCount,
+            $perPage,
+            $page,
+            ['path' => LengthAwarePaginator::resolveCurrentPath()]
+        );
+        if(isset($contacts['@odata.nextLink'])) $paginator->withPath($contacts['@odata.nextLink']);
 
         return [
-            'contacts' => $contacts,
-            'total'    => $data['total'],
-            'top'      => $data['top'],
-            'skip'     => $data['skip'],
+            'data'     => $paginator,
+            'total'    => $total,
+            'top'      => $top,
+            'skip'     => $skip,
         ];
     }
 

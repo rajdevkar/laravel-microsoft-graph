@@ -1,5 +1,5 @@
 {
-    "name": "dcblogdev/laravel-microsoft-graph",
+    "name": "rajdevkar/laravel-microsoft-graph",
     "description": "A Laravel Microsoft Graph API (Office365) package",
     "license": "MIT",
     "authors": [
